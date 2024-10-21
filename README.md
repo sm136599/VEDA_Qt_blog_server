@@ -22,18 +22,16 @@
     ├── server.cpp
     ├── db.cpp
     └── CMakeLists.txt
-
-# MariaDB 설정
-
-서버는 MariaDB를 사용하여 데이터를 저장합니다. 다음 명령어로 MariaDB를 시작하세요.
+```
+## MariaDB 설정
 
 ```bash
 sudo systemctl start mariadb
 sudo systemctl enable mariadb
 mysql -u root -p
+```
 
-
-# DB 설계
+## DB 설계
 
 ```sql
 Table userinfo {
@@ -60,3 +58,4 @@ Table comments {
 Ref: userinfo.user_id > posts.user_id
 Ref: userinfo.user_id > comments.user_id
 Ref: posts.post_num > comments.post_num
+```
