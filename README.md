@@ -17,9 +17,11 @@
 /project-root
     ├── cpp-httplib
     │   └── httplib.h
-    ├── nlohmann_json
-    │   └── json.hpp
-    ├── server.cpp
+    ├── json
+    │   └── json.h
+    ├── writejson.cpp    
+    ├── readjson.cpp
+    ├── thread.cpp
     ├── db.cpp
     └── CMakeLists.txt
 ```
@@ -30,32 +32,37 @@ sudo systemctl start mariadb
 sudo systemctl enable mariadb
 mysql -u root -p
 ```
-
-## DB 설계
-
 ```sql
-Table userinfo {
-  user_id varchar [primary key]
-  user_pw varchar
-  nickname varchar 
-  role varchar
-}
-
-Table posts {
-  post_num integer [primary key]
-  user_id varchar
-  title varchar
-  post_des text
-}
-
-Table comments {
-  comment_num integer [primary key]
-  user_id varchar
-  comment_des text 
-  post_num integer
-}
-
-Ref: userinfo.user_id > posts.user_id
-Ref: userinfo.user_id > comments.user_id
-Ref: posts.post_num > comments.post_num
+CREATE DATABASE blogdb;
+USE blogdb;
+CREATE TABLE userinfo (
+    user_id VARCHAR(255) PRIMARY KEY,
+    user_pw VARCHAR(255),
+    nickname VARCHAR(255),
+    role VARCHAR(50)
+);
+CREATE TABLE posts (
+    post_num INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255),
+    title VARCHAR(255),
+    post_des TEXT,
+    FOREIGN KEY (user_id) REFERENCES userinfo(user_id) ON DELETE CASCADE
+);
+CREATE TABLE comments (
+    comment_num INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255),
+    comment_des TEXT,
+    post_num INT,
+    FOREIGN KEY (user_id) REFERENCES userinfo(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (post_num) REFERENCES posts(post_num) ON DELETE CASCADE
+);
 ```
+## jsoncpp 설치
+```bash
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./vcpkg integrate install
+./vcpkg install jsoncpp
+```
+jsoncpp 디렉토리에서 json 디렉토리를 프로젝트 폴더안으로 이동
