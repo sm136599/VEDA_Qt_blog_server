@@ -4,19 +4,31 @@
 #include <string>
 #include "json/json.h"
 
-// JSON 응답 작성 함수
+// JSON 응답
 std::string makeResponse(const std::string &status, const std::string &message);
 
-// 성공 응답을 만드는 함수
+//회원가입 성공
+std::string successJoin(const std::string &message);
+
+//회원가입 실패
+std::string errorJoin(const std::string &message);
+
+//로그인 성공
+std::string successLogin(const std::string &nickname);
+
+//로그인 실패
+std::string failedLogin();
+
+// 성공 응답
 std::string successResponse();
 
-// 실패 응답을 만드는 함수
+// 실패 응답
 std::string errorResponse(const std::string &msg);
 
-// 게시물 리스트를 JSON으로 작성하는 함수
-std::string writePostsResponse(const Json::Value &posts);
+// 게시물 리스트
+std::string writePostsResponse(const std::vector<Json::Value> &posts);
 
-// 댓글 리스트를 JSON으로 작성하는 함수
+// 댓글 리스트
 std::string writePostDetailResponse(const Json::Value &post, const Json::Value &comments);
 
 #endif // WRITEJSON_H
