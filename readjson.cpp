@@ -10,17 +10,15 @@ bool parseRequest(const std::string &json_str, Json::Value &root) {
     return Json::parseFromStream(readerBuilder, ss, &root, &errs);
 }
 
-bool parseJoinRequest(const std::string &json_str, std::string &loginId, std::string &password, std::string &passwordCheck, std::string &name) {
+bool parseJoinRequest(const std::string &json_str, std::string &loginId, std::string &password, std::string &name) {
     Json::Value root;
     if (!parseRequest(json_str, root)) return false;
     
     loginId = root["loginId"].asString();
     password = root["password"].asString();
-    passwordCheck = root["passwordCheck"].asString();
     name = root["name"].asString();
     std::cout << "ID: " << loginId << std::endl;
     std::cout << "PW: " << password << std::endl;
-    std::cout << "PW Check: " << passwordCheck << std::endl;
     std::cout << "name: " << name << std::endl;
 
     return true;
