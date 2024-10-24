@@ -8,7 +8,7 @@
 bool parseRequest(const std::string &json_str, Json::Value &root);
 
 // 회원가입 요청을 파싱하는 함수
-bool parseJoinRequest(const std::string &json_str, std::string &loginId, std::string &password, std::string &passwordCheck, std::string &name);
+bool parseJoinRequest(const std::string &json_str, std::string &loginId, std::string &password, std::string &name);
 
 // 로그인 요청을 파싱하는 함수
 bool parseLoginRequest(const std::string &json_str, std::string &loginId, std::string &password);
