@@ -4,27 +4,28 @@
 #include "db.h"
 #include <iostream>
 #include <vector>
+#include "json/json.h"
 
 void handleClient(const httplib::Request &req, httplib::Response &res) {
     if (req.method == "POST" && req.path == "/join") {
-        std::string loginId, password, passwordCheck, name;
-        if (parseJoinRequest(req.body, loginId, password, passwordCheck, name)) {
+        std::string loginId, password, name;
+        if (parseJoinRequest(req.body, loginId, password, name)) {
             if (addUser(loginId, password, name)) {
-                res.set_content(successResponse(), "application/json");
+                res.set_content(successJoin("join Completed"), "application/json");
             } else {
-                res.set_content(errorResponse("회원가입 실패"), "application/json");
+                res.set_content(errorJoin("dupId"), "application/json");
             }
         }
     } else if (req.method == "POST" && req.path == "/login") {
         std::string loginId, password;
         if (parseLoginRequest(req.body, loginId, password)) {
-            std::cout << "debug\n";
             int result = loginUser(loginId, password);
-            std::cout << result << " login\n";
             if (result == 0) {
-                res.set_content(successResponse(), "application/json");
+                std::string nickname = findNick(loginId);
+                std::cout << "login : " << nickname << std::endl;
+                res.set_content(successLogin(nickname), "application/json");
             } else {
-                res.set_content(errorResponse("로그인 실패"), "application/json");
+                res.set_content(failedLogin(), "application/json");
             }
         }
     } else if (req.method == "POST" && req.path == "/upload-post") {
@@ -33,7 +34,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             if (addPost(writer, title, description)) {
                 res.set_content(successResponse(), "application/json");
             } else {
-                res.set_content(errorResponse("글쓰기 실패"), "application/json");
+                res.set_content(errorResponse("upload fail"), "application/json");
             }
         }
     } else if (req.method == "POST" && req.path == "/upload-comment") {
@@ -43,74 +44,96 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             if (addComment(postNumber, writer, description)) {
                 res.set_content(successResponse(), "application/json");
             } else {
-                res.set_content(errorResponse("댓글 작성 실패"), "application/json");
+                res.set_content(errorResponse("upload comment fail"), "application/json");
             }
         }
     } else if (req.method == "POST" && req.path == "/delete-post") {
+        connectDB();
         Json::Value root;
         if (parseRequest(req.body, root)) {
             int postNumber = root["postNumber"].asInt();
             std::string query = "DELETE FROM posts WHERE post_num = " + std::to_string(postNumber);
             if (mysql_query(conn, query.c_str())) {
-                res.set_content(errorResponse("글 삭제 실패"), "application/json");
+                res.set_content(errorResponse("delete post fail"), "application/json");
             } else {
                 res.set_content(successResponse(), "application/json");
             }
         }
     } else if (req.method == "POST" && req.path == "/delete-comment") {
         Json::Value root;
+        connectDB();
         if (parseRequest(req.body, root)) {
             int commentNumber = root["commentNumber"].asInt();
             std::string query = "DELETE FROM comments WHERE comment_num = " + std::to_string(commentNumber);
             if (mysql_query(conn, query.c_str())) {
-                res.set_content(errorResponse("댓글 삭제 실패"), "application/json");
+                std::cout << "delete fail!" << std::endl;
+                res.set_content(errorResponse("delete comment fail"), "application/json");
             } else {
+                std::cout << "comment deleted!" << std::endl;
                 res.set_content(successResponse(), "application/json");
             }
         }
     } else if (req.method == "GET" && req.path == "/get-all-post") {
-        std::vector<std::string> posts = getAllPosts();
-        std::cout << posts[0] << std::endl;
-        Json::Value postArray(Json::arrayValue);
-        for (const auto &post : posts) {
-            postArray.append(post);
-        }
-        Json::Value response;
-        response["posts"] = postArray;
-        res.set_content(response.toStyledString(), "application/json");
+        std::vector<Json::Value> posts = getAllPosts();
+        res.set_content(writePostsResponse(posts), "application/json");
     } else if (req.method == "GET" && req.path.find("/get-post/") == 0) {
         std::string postIdStr = req.path.substr(10); // /get-post/{post-id}에서 post-id 추출
         int postId = std::stoi(postIdStr);
         std::string post;
         std::vector<std::string> comments;
-        if (getPostWithComments(postId, post, comments)) {
-            Json::Value postJson;
-            postJson["post"] = post;
-            Json::Value commentArray(Json::arrayValue);
-            for (const auto &comment : comments) {
-                commentArray.append(comment);
-            }
-            postJson["comments"] = commentArray;
-            res.set_content(postJson.toStyledString(), "application/json");
-        } else {
-            res.set_content(errorResponse("게시글 조회 실패"), "application/json");
-        }
+        res.set_content(getPostWithComments(postId, post, comments), "application/json");
     } else if (req.method == "POST" && req.path == "/delete-user") {
+        connectDB();
         Json::Value root;
         if (parseRequest(req.body, root)) {
             std::string user = root["user"].asString();
             std::string query = "DELETE FROM userinfo WHERE nickname = '" + user + "'";
             if (mysql_query(conn, query.c_str())) {
-                res.set_content(errorResponse("유저 삭제 실패"), "application/json");
+                res.set_content(errorResponse("failed to delete user"), "application/json");
             } else {
                 res.set_content(successResponse(), "application/json");
             }
         }
-    } else {
+    } else if (req.method == "POST" && req.path == "/edit-post") {   
+        int post_id;
+        std::string title, description;
+        Json::Value root;
+        parseRequest(req.body, root);
+        post_id = root["postNumber"].asInt();
+        title = root["subject"].asString();    
+        description = root["description"].asString();    
+
+        if (editPost(post_id, title, description)) {
+            std::cout << "edit post success!" << std::endl;
+            res.set_content(successResponse(), "application/json");
+        } else {
+            std::cout << "edit post fail!" << std::endl;
+            res.set_content(errorResponse("edit fail"), "application/json");
+        }
+    } else if (req.method == "POST" && req.path == "/edit-comment") {  
+        int comment_id;
+        std::string description;
+        Json::Value root;
+        parseRequest(req.body, root);
+        comment_id = root["commentNumber"].asInt();   
+        description = root["description"].asString();   
+
+        if(editComment(comment_id, description)){
+            std::cout << "edit comment success!" << std::endl;
+            res.set_content(successResponse(), "application/json");
+        } else {
+            std::cout << "edit comment fail!" << std::endl;
+            res.set_content(errorResponse("edit fail"), "application/json");
+        }
+    }
+    // 추가
+    else {
         res.set_content(errorResponse("잘못된 요청"), "application/json");
     } 
-    // 나머지 API 구현
+    
 }
+
+
 
 int main() {
     httplib::Server svr;
@@ -122,10 +145,11 @@ int main() {
     svr.Post("/delete-post", handleClient);
     svr.Post("/delete-comment", handleClient);
     svr.Post("/delete-user", handleClient);
+    svr.Post("/edit-post", handleClient);
+    svr.Post("/edit-comment", handleClient);
     svr.Get("/get-all-post", handleClient);
     svr.Get("/get-post/(.*)", handleClient); // "/get-post/{post-id}" 경로 처리
     
-    std::cout << "Server started at http://localhost:8080\n";
-    svr.listen("0.0.0.0", 8080); // 모든 외부 접속 허용
+    std::cout << "Server started at http://192.168.0.85:8000\n";
+    svr.listen("0.0.0.0", 8000); // 모든 외부 접속 허용
 }
-
