@@ -15,6 +15,8 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(errorJoin("dupId"), "application/json");
             }
+            // MySQL 연결을 닫음
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/login") {
         std::string loginId, password;
@@ -27,6 +29,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(failedLogin(), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/upload-post") {
         std::string title, writer, description;
@@ -36,6 +39,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(errorResponse("upload fail"), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/upload-comment") {
         int postNumber;
@@ -46,6 +50,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(errorResponse("upload comment fail"), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/delete-post") {
         connectDB();
@@ -58,6 +63,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(successResponse(), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/delete-comment") {
         Json::Value root;
@@ -72,16 +78,19 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
                 std::cout << "comment deleted!" << std::endl;
                 res.set_content(successResponse(), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "GET" && req.path == "/get-all-post") {
         std::vector<Json::Value> posts = getAllPosts();
         res.set_content(writePostsResponse(posts), "application/json");
+        mysql_close(conn);
     } else if (req.method == "GET" && req.path.find("/get-post/") == 0) {
         std::string postIdStr = req.path.substr(10); // /get-post/{post-id}에서 post-id 추출
         int postId = std::stoi(postIdStr);
         std::string post;
         std::vector<std::string> comments;
         res.set_content(getPostWithComments(postId, post, comments), "application/json");
+        mysql_close(conn);
     } else if (req.method == "POST" && req.path == "/delete-user") {
         connectDB();
         Json::Value root;
@@ -93,6 +102,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             } else {
                 res.set_content(successResponse(), "application/json");
             }
+            mysql_close(conn);
         }
     } else if (req.method == "POST" && req.path == "/edit-post") {   
         int post_id;
@@ -110,6 +120,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             std::cout << "edit post fail!" << std::endl;
             res.set_content(errorResponse("edit fail"), "application/json");
         }
+        mysql_close(conn);
     } else if (req.method == "POST" && req.path == "/edit-comment") {  
         int comment_id;
         std::string description;
@@ -125,6 +136,7 @@ void handleClient(const httplib::Request &req, httplib::Response &res) {
             std::cout << "edit comment fail!" << std::endl;
             res.set_content(errorResponse("edit fail"), "application/json");
         }
+        mysql_close(conn);
     }
     // 추가
     else {
